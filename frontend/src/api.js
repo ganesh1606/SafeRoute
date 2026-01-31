@@ -1,4 +1,4 @@
-const BASE = "https://saferoute-e6bg.onrender.com";
+const BASE = "https://saferoute.onrender.com";
 
 export async function getRoutes(src, dst) {
   const res = await fetch(

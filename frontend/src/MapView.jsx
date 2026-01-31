@@ -2,18 +2,32 @@ import {
     MapContainer,
     TileLayer,
     Polyline,
-    CircleMarker
+    CircleMarker,
+    Marker
 } from "react-leaflet";
+import L from "leaflet";
 
-export default function MapView({ routes = [], dangerZones = [] }) {
+const userIcon = new L.Icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/64/64113.png",
+    iconSize: [32, 32]
+});
+
+export default function MapView({ routes, dangerZones, userLocation }) {
     return (
         <MapContainer
-            center={[16.545, 81.521]}
-            zoom={13}
+            center={[userLocation.lat, userLocation.lon]}
+            zoom={15}
             style={{ height: "100%", width: "100%" }}
         >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+            {/* User Location */}
+            <Marker
+                position={[userLocation.lat, userLocation.lon]}
+                icon={userIcon}
+            />
+
+            {/* Routes */}
             {routes.map((r, i) => (
                 <Polyline
                     key={i}
@@ -23,6 +37,7 @@ export default function MapView({ routes = [], dangerZones = [] }) {
                 />
             ))}
 
+            {/* Danger Zones */}
             {dangerZones.map((z, i) => (
                 <CircleMarker
                     key={i}
