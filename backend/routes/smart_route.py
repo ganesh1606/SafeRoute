@@ -13,10 +13,10 @@ def smart_route(data: dict):
 
     routes = fetch_routes(src, dst)
 
-    analyzed = []
+    result = []
     for r in routes:
         safety = score_route(area, time)
-        analyzed.append({
+        result.append({
             "distance_km": round(r["distance"] / 1000, 2),
             "duration_min": round(r["duration"] / 60, 1),
             "geometry": r["geometry"],
@@ -24,4 +24,4 @@ def smart_route(data: dict):
             "risk_level": safety["risk_level"]
         })
 
-    return analyzed
+    return result
