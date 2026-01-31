@@ -2,19 +2,22 @@ import { useEffect, useState } from "react";
 import MapView from "./MapView";
 import { getSmartRoutes } from "./api";
 import useLiveGPS from "./hooks/useLiveGPS";
+import useDestinationSearch from "./hooks/useDestinationSearch";
 
 export default function App() {
   const { location, error } = useLiveGPS();
+  const { results, search } = useDestinationSearch();
+
+  const [destination, setDestination] = useState(null);
   const [routes, setRoutes] = useState([]);
   const [active, setActive] = useState(0);
-
-  const destination = { lat: 16.552, lon: 81.531 };
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
-    if (!location) return;
+    if (!location || !destination) return;
 
     getSmartRoutes(location, destination).then(setRoutes);
-  }, [location]); // 🔥 AUTO REROUTE ON MOVE
+  }, [location, destination]);
 
   if (error) return <h2>GPS Error: {error}</h2>;
   if (!location) return <h2>📡 Waiting for GPS…</h2>;
@@ -22,9 +25,41 @@ export default function App() {
   return (
     <div style={{ height: "100vh" }}>
       <h2 style={{ textAlign: "center" }}>
-        🛡️ SafeRoute – Live GPS Navigation
+        🛡️ SafeRoute – Smart Navigation
       </h2>
 
+      {/* Destination Search */}
+      <div style={{ padding: "10px" }}>
+        <input
+          value={query}
+          onChange={e => {
+            setQuery(e.target.value);
+            search(e.target.value);
+          }}
+          placeholder="Search destination..."
+          style={{ width: "100%", padding: "8px" }}
+        />
+
+        {results.map((r, i) => (
+          <div
+            key={i}
+            onClick={() => {
+              setDestination({ lat: r.lat, lon: r.lon });
+              setQuery(r.name);
+              setRoutes([]);
+            }}
+            style={{
+              padding: "6px",
+              cursor: "pointer",
+              borderBottom: "1px solid #ccc"
+            }}
+          >
+            📍 {r.name}
+          </div>
+        ))}
+      </div>
+
+      {/* Route Options */}
       <div style={{ display: "flex", gap: "8px", padding: "8px" }}>
         {routes.map((r, i) => (
           <button
@@ -50,7 +85,8 @@ export default function App() {
         ))}
       </div>
 
-      <div style={{ height: "80%" }}>
+      {/* Map */}
+      <div style={{ height: "70%" }}>
         <MapView
           routes={routes}
           activeIndex={active}
