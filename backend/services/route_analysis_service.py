@@ -10,7 +10,11 @@ with open(DATA / "crime_data.csv") as f:
         crime[r["area"].lower()] = int(r["crime_score"])
 
 lighting = json.load(open(DATA / "lighting_data.json"))
-cctv = json.load(open(DATA / "cctv_data.json"))
+try:
+    cctv = json.load(open(DATA / "cctv_data.json"))
+except Exception as e:
+    print("⚠️ CCTV data load failed:", e)
+    cctv = {}
 places = json.load(open(DATA / "places_data.json"))
 
 def score_route(area, time):
