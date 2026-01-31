@@ -1,50 +1,36 @@
-import csv
-import json
+import csv, json, joblib
 from pathlib import Path
 
-DATA = Path(__file__).parent.parent / "data"
+BASE = Path(__file__).parent.parent
+DATA = BASE / "data"
+MODEL = BASE / "ml/safety_model.pkl"
 
-def safe_json_load(path):
-    try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"⚠️ Failed to load {path.name}: {e}")
-        return {}
+model = joblib.load(MODEL)
 
-# Load data safely
 crime = {}
-try:
-    with open(DATA / "crime_data.csv") as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            crime[r["area"].lower()] = int(r["crime_score"])
-except Exception as e:
-    print("⚠️ Crime data load failed:", e)
+with open(DATA / "crime_data.csv") as f:
+    for r in csv.DictReader(f):
+        crime[r["area"]] = int(r["crime_score"])
 
-lighting = safe_json_load(DATA / "lighting_data.json")
-cctv = safe_json_load(DATA / "cctv_data.json")
-places = safe_json_load(DATA / "places_data.json")
+lighting = json.load(open(DATA / "lighting_data.json"))
+cctv = json.load(open(DATA / "cctv_data.json"))
+places = json.load(open(DATA / "places_data.json"))
 
-def score_route(area, time):
-    area_l = area.lower()
+def predict_route_safety(area, time):
+    features = [[
+        crime.get(area, 30),
+        lighting.get(area, {}).get(time, 5),
+        cctv.get(area, 0),
+        places.get(area, {}).get("hotels", 0),
+        places.get(area, {}).get("shops", 0),
+        1 if time == "night" else 0
+    ]]
 
-    crime_score = crime.get(area_l, 30)
-    light_score = lighting.get(area, {}).get(time, 5)
-    cctv_score = cctv.get(area, 0) * -2
-    hotel_score = places.get(area, {}).get("hotels", 0) * -3
-    shop_score = places.get(area, {}).get("shops", 0) * -1
+    pred = model.predict(features)[0]
 
-    total = crime_score + light_score + cctv_score + hotel_score + shop_score
-
-    if total < 25:
-        level = "SAFE"
-    elif total < 55:
-        level = "MODERATE"
-    else:
-        level = "UNSAFE"
+    levels = ["SAFE", "MODERATE", "UNSAFE"]
 
     return {
-        "risk_score": max(total, 0),
-        "risk_level": level
+        "risk_level": levels[pred],
+        "risk_score": int(pred * 35 + 15)
     }
