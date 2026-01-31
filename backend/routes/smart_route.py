@@ -17,12 +17,11 @@ def smart_route(data: dict):
     for r in routes:
         safety = score_route(area, time)
         analyzed.append({
-            "distance_km": round(r["distance"]/1000,2),
-            "duration_min": round(r["duration"]/60,1),
+            "distance_km": round(r["distance"] / 1000, 2),
+            "duration_min": round(r["duration"] / 60, 1),
             "geometry": r["geometry"],
             "risk_score": safety["risk_score"],
             "risk_level": safety["risk_level"]
         })
 
-    analyzed.sort(key=lambda x: x["risk_score"])
     return analyzed
