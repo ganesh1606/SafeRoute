@@ -1,6 +1,10 @@
 {
     "Bhimavaram": {
-        "day": 5,
+        "day": 3,
         "night": 8
+    },
+    "Palakollu": {
+        "day": 4,
+        "night": 7
     }
 }
