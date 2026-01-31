@@ -4,7 +4,10 @@ export default function useDestinationSearch() {
   const [results, setResults] = useState([]);
 
   async function search(query) {
-    if (!query) return;
+    if (!query) {
+      setResults([]);
+      return;
+    }
 
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
@@ -23,5 +26,9 @@ export default function useDestinationSearch() {
     );
   }
 
-  return { results, search };
+  function clearResults() {
+    setResults([]);
+  }
+
+  return { results, search, clearResults };
 }
