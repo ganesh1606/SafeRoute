@@ -1,4 +1,4 @@
-const BASE = "https://saferoute.onrender.com";
+const BASE = "https://saferoute-e6bg.onrender.com";
 
 export async function getSmartRoutes(source, destination) {
   const res = await fetch(`${BASE}/smart-route/`, {
@@ -11,5 +11,6 @@ export async function getSmartRoutes(source, destination) {
       time: "night"
     })
   });
+
   return res.json();
 }

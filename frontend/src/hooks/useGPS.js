@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function useGPS() {
+export default function useLiveGPS() {
   const [location, setLocation] = useState(null);
   const [error, setError] = useState(null);
 
@@ -10,24 +10,22 @@ export default function useGPS() {
       return;
     }
 
-    const watchId = navigator.geolocation.watchPosition(
+    const id = navigator.geolocation.watchPosition(
       pos => {
         setLocation({
           lat: pos.coords.latitude,
           lon: pos.coords.longitude
         });
       },
-      err => {
-        setError(err.message);
-      },
+      err => setError(err.message),
       {
         enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 10000
+        timeout: 10000,
+        maximumAge: 3000
       }
     );
 
-    return () => navigator.geolocation.clearWatch(watchId);
+    return () => navigator.geolocation.clearWatch(id);
   }, []);
 
   return { location, error };
