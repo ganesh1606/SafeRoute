@@ -1,23 +1,52 @@
-import { MapContainer, TileLayer, Polyline, Marker } from "react-leaflet";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
 
-const arrow = angle => new L.DivIcon({
-    html: `<div style="width:32px;height:32px;border-left:6px solid #2563eb;border-bottom:6px solid #2563eb;transform:rotate(${135 + angle}deg)"></div>`,
-    iconSize: [36, 36], iconAnchor: [18, 18]
-});
+export default function MapView({ routes, selected, destination }) {
+    const ref = useRef(null);
+    const map = useRef(null);
+    const layers = useRef([]);
 
-export default function MapView({ routes, selected, currentPos, destination }) {
-    return (
-        <MapContainer center={[16.545, 81.52]} zoom={14} style={{ height: "100vh" }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+    useEffect(() => {
+        if (map.current) return;
 
-            {currentPos && <Marker position={[currentPos.lat, currentPos.lon]} icon={arrow(currentPos.heading)} />}
-            {destination && <Marker position={[destination.lat, destination.lon]} />}
+        map.current = L.map(ref.current).setView(
+            [16.5449, 81.5212],
+            14
+        );
 
-            {routes.map((r, i) => (
-                <Polyline key={i} positions={r.points.map(p => [p.lat, p.lon])}
-                    color={r.color} weight={i === selected ? 7 : 5} />
-            ))}
-        </MapContainer>
-    );
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap"
+        }).addTo(map.current);
+    }, []);
+
+    useEffect(() => {
+        if (!map.current) return;
+
+        layers.current.forEach(l => map.current.removeLayer(l));
+        layers.current = [];
+
+        routes.forEach((r, i) => {
+            const line = L.polyline(
+                r.points.map(p => [p.lat, p.lon]),
+                {
+                    color: r.color,
+                    weight: i === selected ? 7 : 4
+                }
+            ).addTo(map.current);
+
+            layers.current.push(line);
+
+            if (i === selected) {
+                map.current.fitBounds(line.getBounds(), { padding: [40, 40] });
+            }
+        });
+
+        if (destination) {
+            layers.current.push(
+                L.marker([destination.lat, destination.lon]).addTo(map.current)
+            );
+        }
+    }, [routes, selected, destination]);
+
+    return <div ref={ref} style={{ flex: 1, height: "100vh" }} />;
 }
