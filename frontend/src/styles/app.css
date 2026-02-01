@@ -1,0 +1,96 @@
+.layout {
+    display: flex;
+    height: 100vh
+}
+
+.panel {
+    width: 360px;
+    background: #0f172a;
+    color: white;
+    padding: 20px
+}
+
+.panel h1 {
+    margin: 0
+}
+
+.subtitle {
+    opacity: .7;
+    margin-bottom: 12px
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 6px
+}
+
+.suggestion {
+    background: #1e293b;
+    padding: 8px;
+    cursor: pointer
+}
+
+.suggestion:hover {
+    background: #334155
+}
+
+.modes button {
+    font-size: 20px;
+    margin-right: 8px
+}
+
+.modes .active {
+    background: #2563eb;
+    color: white
+}
+
+.route-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px
+}
+
+.route-card {
+    background: #1e293b;
+    padding: 10px;
+    margin-top: 8px;
+    cursor: pointer
+}
+
+.route-card.selected {
+    border-left: 4px solid #22c55e
+}
+
+.dot {
+    height: 10px;
+    width: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px
+}
+
+.dot.green {
+    background: #16a34a
+}
+
+.dot.orange {
+    background: #f97316
+}
+
+.dot.red {
+    background: #dc2626
+}
+
+.sos {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    font-size: 18
+}

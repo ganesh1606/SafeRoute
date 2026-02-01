@@ -1,47 +1,52 @@
 import { useEffect, useState } from "react";
-import { getRoute, getHeatmap, checkAlert, sendSOS } from "./api";
-import { speak } from "./voice";
-import Map from "./Map";
+import MapView from "./components/MapView";
+import LeftDashboard from "./components/LeftDashboard";
+import SOSButton from "./components/SOSButton";
+import { fetchRoutes, checkDanger } from "./services/api";
+import { startGPS } from "./services/gps";
+import { speak } from "./services/voice";
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [dest, setDest] = useState(null);
-  const [route, setRoute] = useState(null);
-  const [heatmap, setHeatmap] = useState([]);
+    const [routes, setRoutes] = useState([]);
+    const [selected, setSelected] = useState(0);
+    const [currentPos, setCurrentPos] = useState(null);
+    const [destination, setDestination] = useState(null);
+    const [mode, setMode] = useState("car");
 
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(p => {
-      setUser({ lat: p.coords.latitude, lon: p.coords.longitude });
-    });
-    getHeatmap().then(setHeatmap);
-  }, []);
+    useEffect(() => {
+        startGPS(async pos => {
+            setCurrentPos(pos);
 
-  useEffect(() => {
-    if (user && dest) {
-      getRoute(user, dest).then(setRoute);
+            const alert = await checkDanger(pos.lat, pos.lon);
+            if (alert.alert) speak(alert.message);
+        });
+    }, []);
+
+    async function handleSearch(source, dest, m) {
+        setDestination(dest);
+        setMode(m);
+        const res = await fetchRoutes(source, dest, m);
+        setRoutes(res.routes);
+        setSelected(0);
     }
-  }, [user, dest]);
 
-  useEffect(() => {
-    if (!user) return;
-    const id = setInterval(() => {
-      checkAlert(user).then(r => {
-        if (r.alert) {
-          speak(r.alert);
-          alert(r.alert);
-        }
-      });
-    }, 6000);
-    return () => clearInterval(id);
-  }, [user]);
+    return (
+        <div className="layout">
+            <LeftDashboard
+                onSearch={handleSearch}
+                routes={routes}
+                selected={selected}
+                onSelect={setSelected}
+            />
 
-  if (!user) return <h3>📡 Getting GPS…</h3>;
+            <MapView
+                routes={routes}
+                selected={selected}
+                currentPos={currentPos}
+                destination={destination}
+            />
 
-  return (
-    <>
-      <button onClick={() => sendSOS(user)}>🚨 SOS</button>
-      <Map user={user} dest={dest} route={route} heatmap={heatmap} setDest={setDest} />
-      {route && <div>📍 {route.distance_km} km | ⏱ {route.eta_min} min</div>}
-    </>
-  );
+            <SOSButton position={currentPos} />
+        </div>
+    );
 }

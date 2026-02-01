@@ -1,5 +1,6 @@
 export function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = "en-IN";
-  speechSynthesis.speak(msg);
+  msg.rate = 0.95;
+  msg.pitch = 1;
+  window.speechSynthesis.speak(msg);
 }
