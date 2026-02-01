@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from services.maps_service import fetch_routes
-from services.route_analysis_service import predict_route_safety
+from services.route_analysis_service import score_route
 
 router = APIRouter(prefix="/smart-route", tags=["AI Routing"])
 
@@ -12,16 +12,26 @@ def smart_route(data: dict):
     time = data["time"]
 
     routes = fetch_routes(src, dst)
+    output = []
 
-    results = []
     for r in routes:
-        safety = predict_route_safety(area, time)
-        results.append({
+        segments = []
+        coords = r["geometry"]["coordinates"]
+
+        for i in range(0, len(coords), 5):
+            s = score_route(area, time)
+            segments.append({
+                "lat": coords[i][1],
+                "lon": coords[i][0],
+                "risk_level": s["risk_level"],
+                "risk_score": s["risk_score"]
+            })
+
+        output.append({
             "distance_km": round(r["distance"] / 1000, 2),
             "duration_min": round(r["duration"] / 60, 1),
             "geometry": r["geometry"],
-            "risk_score": safety["risk_score"],
-            "risk_level": safety["risk_level"]
+            "segments": segments
         })
 
-    return results
+    return output

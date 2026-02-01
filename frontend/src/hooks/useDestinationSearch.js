@@ -3,32 +3,31 @@ import { useState } from "react";
 export default function useDestinationSearch() {
   const [results, setResults] = useState([]);
 
-  async function search(query) {
-    if (!query) {
+  async function search(q) {
+    if (!q) {
       setResults([]);
       return;
     }
 
-    const res = await fetch(
+    const r = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        query
+        q
       )}`
     );
 
-    const data = await res.json();
-
+    const d = await r.json();
     setResults(
-      data.slice(0, 5).map(p => ({
-        name: p.display_name,
-        lat: parseFloat(p.lat),
-        lon: parseFloat(p.lon)
+      d.slice(0, 5).map(x => ({
+        name: x.display_name,
+        lat: +x.lat,
+        lon: +x.lon
       }))
     );
   }
 
-  function clearResults() {
+  function clear() {
     setResults([]);
   }
 
-  return { results, search, clearResults };
+  return { results, search, clear };
 }

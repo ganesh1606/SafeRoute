@@ -1,36 +1,33 @@
-import csv, json, joblib
+import json, csv
 from pathlib import Path
 
-BASE = Path(__file__).parent.parent
-DATA = BASE / "data"
-MODEL = BASE / "ml/safety_model.pkl"
+DATA = Path(__file__).parent.parent / "data"
 
-model = joblib.load(MODEL)
+def safe_load(path):
+    try:
+        return json.load(open(path))
+    except:
+        return {}
+
+lighting = safe_load(DATA / "lighting_data.json")
+cctv = safe_load(DATA / "cctv_data.json")
+places = safe_load(DATA / "places_data.json")
 
 crime = {}
-with open(DATA / "crime_data.csv") as f:
-    for r in csv.DictReader(f):
-        crime[r["area"]] = int(r["crime_score"])
+try:
+    with open(DATA / "crime_data.csv") as f:
+        for r in csv.DictReader(f):
+            crime[r["area"].lower()] = int(r["crime_score"])
+except:
+    pass
 
-lighting = json.load(open(DATA / "lighting_data.json"))
-cctv = json.load(open(DATA / "cctv_data.json"))
-places = json.load(open(DATA / "places_data.json"))
+def score_route(area, time):
+    a = area.lower()
+    score = crime.get(a, 30)
+    score += lighting.get(area, {}).get(time, 5)
+    score -= cctv.get(area, 0) * 2
+    score -= places.get(area, {}).get("hotels", 0) * 3
+    score -= places.get(area, {}).get("shops", 0)
 
-def predict_route_safety(area, time):
-    features = [[
-        crime.get(area, 30),
-        lighting.get(area, {}).get(time, 5),
-        cctv.get(area, 0),
-        places.get(area, {}).get("hotels", 0),
-        places.get(area, {}).get("shops", 0),
-        1 if time == "night" else 0
-    ]]
-
-    pred = model.predict(features)[0]
-
-    levels = ["SAFE", "MODERATE", "UNSAFE"]
-
-    return {
-        "risk_level": levels[pred],
-        "risk_score": int(pred * 35 + 15)
-    }
+    level = "SAFE" if score < 25 else "MODERATE" if score < 55 else "UNSAFE"
+    return {"risk_score": max(score, 0), "risk_level": level}

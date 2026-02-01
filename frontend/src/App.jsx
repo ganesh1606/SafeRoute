@@ -1,153 +1,122 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MapView from "./MapView";
-import { getSmartRoutes } from "./api";
-import useLiveGPS from "./hooks/useLiveGPS";
-import useDestinationSearch from "./hooks/useDestinationSearch";
+
+const BACKEND = "https://saferoute-e6bg.onrender.com";
 
 export default function App() {
-  const { location, error } = useLiveGPS();
-  const { results, search, clearResults } = useDestinationSearch();
+  const user = useRef({ lat: 16.545, lon: 81.521 });
 
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
   const [destination, setDestination] = useState(null);
   const [routes, setRoutes] = useState([]);
-  const [active, setActive] = useState(0);
+  const [heatmap, setHeatmap] = useState([]);
 
-  // 🔁 Auto reroute when user moves OR destination changes
+  // GPS (single safe read)
   useEffect(() => {
-    if (!location || !destination) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        user.current = {
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude
+        };
+      },
+      () => { }
+    );
+  }, []);
 
-    getSmartRoutes(location, destination).then(data => {
-      setRoutes(data || []);
-      setActive(0);
-    });
-  }, [location, destination]);
+  // Search
+  async function searchPlace(q) {
+    if (!q) return;
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${q}`
+    );
+    const d = await r.json();
+    setResults(
+      d.slice(0, 5).map(p => ({
+        name: p.display_name,
+        lat: +p.lat,
+        lon: +p.lon
+      }))
+    );
+  }
 
-  if (error) return <h2>❌ GPS Error: {error}</h2>;
-  if (!location) return <h2>📡 Waiting for GPS…</h2>;
+  // Routes
+  useEffect(() => {
+    if (!destination) return;
+
+    fetch(`${BACKEND}/smart-route/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: user.current,
+        destination,
+        area: "Bhimavaram",
+        time: "night"
+      })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setRoutes(
+            data.filter(r => r.geometry && r.geometry.coordinates)
+          );
+        } else {
+          setRoutes([]);
+        }
+      })
+      .catch(() => setRoutes([]));
+  }, [destination]);
+
+  // Heatmap
+  useEffect(() => {
+    fetch(`${BACKEND}/heatmap/`)
+      .then(r => {
+        if (!r.ok) return [];
+        return r.json();
+      })
+      .then(data => {
+        setHeatmap(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setHeatmap([]));
+  }, []);
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
-      <h2 style={{ textAlign: "center", margin: "10px 0" }}>
-        🛡️ SafeRoute – Smart Navigation
-      </h2>
-
-      {/* Destination Search */}
-      <div style={{ padding: "10px", position: "relative" }}>
+    <div style={{ height: "100vh" }}>
+      {/* Search */}
+      <div style={{ padding: 8 }}>
         <input
           value={query}
-          disabled={!!destination}
           onChange={e => {
             setQuery(e.target.value);
-            search(e.target.value);
+            searchPlace(e.target.value);
           }}
-          placeholder="📍 Search destination..."
-          style={{
-            width: "100%",
-            padding: "10px",
-            fontSize: "16px"
-          }}
+          placeholder="Search destination..."
+          style={{ width: "100%", padding: 8 }}
         />
-
-        {/* Suggestions */}
-        {!destination && results.length > 0 && (
+        {results.map((r, i) => (
           <div
-            style={{
-              position: "absolute",
-              top: "45px",
-              left: 0,
-              right: 0,
-              background: "white",
-              border: "1px solid #ccc",
-              zIndex: 1000
-            }}
-          >
-            {results.map((r, i) => (
-              <div
-                key={i}
-                onClick={() => {
-                  setDestination({ lat: r.lat, lon: r.lon });
-                  setQuery(r.name);
-                  clearResults();
-                  setRoutes([]);
-                }}
-                style={{
-                  padding: "8px",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #eee"
-                }}
-              >
-                📍 {r.name}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Change destination */}
-        {destination && (
-          <button
+            key={i}
             onClick={() => {
-              setDestination(null);
-              setQuery("");
-              setRoutes([]);
-              clearResults();
+              setDestination({ lat: r.lat, lon: r.lon });
+              setQuery(r.name);
+              setResults([]);
             }}
-            style={{
-              marginTop: "8px",
-              padding: "6px 10px",
-              cursor: "pointer"
-            }}
+            style={{ padding: 6, cursor: "pointer" }}
           >
-            🔄 Change destination
-          </button>
-        )}
+            📍 {r.name}
+          </div>
+        ))}
       </div>
 
-      {/* Route Options */}
-      {routes.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            padding: "8px",
-            overflowX: "auto"
-          }}
-        >
-          {routes.map((r, i) => (
-            <button
-              key={i}
-              onClick={() => setActive(i)}
-              style={{
-                minWidth: "120px",
-                padding: "8px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                border: i === active ? "2px solid black" : "1px solid gray",
-                background:
-                  r.risk_level === "SAFE"
-                    ? "#c8f7c5"
-                    : r.risk_level === "MODERATE"
-                      ? "#ffe6b3"
-                      : "#f7c5c5"
-              }}
-            >
-              Route {i + 1}
-              <br />
-              <strong>{r.risk_level}</strong>
-              <br />
-              {r.distance_km} km · {r.duration_min} min
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Map */}
-      <div style={{ flex: 1 }}>
+      <div style={{ height: "85%" }}>
         <MapView
+          user={user.current}
+          destination={destination}
           routes={routes}
-          activeIndex={active}
-          user={location}
+          heatmap={heatmap}
         />
       </div>
     </div>

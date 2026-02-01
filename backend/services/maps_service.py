@@ -6,6 +6,4 @@ def fetch_routes(src, dst):
         f"{src['lon']},{src['lat']};{dst['lon']},{dst['lat']}"
         "?alternatives=true&geometries=geojson"
     )
-
-    data = requests.get(url).json()
-    return data["routes"]
+    return requests.get(url).json()["routes"]

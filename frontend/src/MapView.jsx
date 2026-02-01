@@ -1,41 +1,68 @@
 import {
     MapContainer,
     TileLayer,
+    Marker,
     Polyline,
-    Marker
+    Circle
 } from "react-leaflet";
-import L from "leaflet";
+import { useEffect, useRef } from "react";
 
-const userIcon = new L.Icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/64/64113.png",
-    iconSize: [32, 32]
-});
+const DEFAULT = [16.545, 81.521];
 
-export default function MapView({ routes, activeIndex, user }) {
+export default function MapView({ user, destination, routes, heatmap }) {
+    const mapRef = useRef(null);
+
+    useEffect(() => {
+        if (mapRef.current && destination) {
+            mapRef.current.setView(
+                [destination.lat, destination.lon],
+                14
+            );
+        }
+    }, [destination]);
+
     return (
         <MapContainer
-            center={[user.lat, user.lon]}
-            zoom={15}
+            center={DEFAULT}
+            zoom={14}
+            whenCreated={map => (mapRef.current = map)}
             style={{ height: "100%", width: "100%" }}
         >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-            <Marker position={[user.lat, user.lon]} icon={userIcon} />
+            {/* User */}
+            <Marker position={[user.lat, user.lon]} />
 
+            {/* Destination */}
+            {destination && (
+                <Marker position={[destination.lat, destination.lon]} />
+            )}
+
+            {/* Routes */}
             {routes.map((r, i) => (
                 <Polyline
                     key={i}
                     positions={r.geometry.coordinates.map(c => [c[1], c[0]])}
-                    color={
-                        i === activeIndex
-                            ? "blue"
-                            : r.risk_level === "SAFE"
-                                ? "green"
-                                : r.risk_level === "MODERATE"
+                    color="blue"
+                    weight={4}
+                />
+            ))}
+
+            {/* Heatmap (SAFE) */}
+            {heatmap.map((p, i) => (
+                <Circle
+                    key={i}
+                    center={[p.lat, p.lon]}
+                    radius={150}
+                    pathOptions={{
+                        color:
+                            p.intensity > 0.7
+                                ? "red"
+                                : p.intensity > 0.4
                                     ? "orange"
-                                    : "red"
-                    }
-                    weight={i === activeIndex ? 7 : 4}
+                                    : "yellow",
+                        fillOpacity: 0.4
+                    }}
                 />
             ))}
         </MapContainer>
