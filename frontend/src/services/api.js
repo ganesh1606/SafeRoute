@@ -1,17 +1,52 @@
-export async function checkDanger(lat, lon) {
-  const res = await fetch("http://localhost:8000/danger-alert", {
+// src/services/api.js
+
+const BASE_URL = "https://saferoute-e6bg.onrender.com"; 
+// ⬆️ replace only if your backend URL changes
+
+export async function fetchRoutes(source, destination, mode) {
+  const res = await fetch(`${BASE_URL}/routes`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lat, lon }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      source,
+      destination,
+      mode,
+    }),
   });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch routes");
+  }
+
   return res.json();
 }
 
-export async function reroute(source, destination, mode) {
-  const res = await fetch("http://localhost:8000/reroute", {
+export async function checkDanger(lat, lon) {
+  const res = await fetch(`${BASE_URL}/danger-alert`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ source, destination, mode }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ lat, lon }),
   });
+
+  if (!res.ok) {
+    return { alert: false };
+  }
+
+  return res.json();
+}
+
+export async function sendSOS(position) {
+  const res = await fetch(`${BASE_URL}/sos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(position),
+  });
+
   return res.json();
 }
