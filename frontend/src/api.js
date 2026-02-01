@@ -1,30 +1,25 @@
-const BASE = "https://saferoute-e6bg.onrender.com";
+const API = "http://localhost:8000";
 
-export const getSmartRoutes = (s, d) =>
-  fetch(`${BASE}/smart-route/`, {
+export const getRoute = (s, d) =>
+  fetch(`${API}/navigate/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      source: s,
-      destination: d,
-      area: "Bhimavaram",
-      time: "night"
-    })
-  }).then(r => r.json());
-
-export const sendSOS = (lat, lon) =>
-  fetch(`${BASE}/sos/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lat, lon })
-  });
-
-export const sendReport = (lat, lon, type) =>
-  fetch(`${BASE}/reports/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ lat, lon, type })
-  });
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({source:s, destination:d})
+  }).then(r=>r.json());
 
 export const getHeatmap = () =>
-  fetch(`${BASE}/heatmap/`).then(r => r.json());
+  fetch(`${API}/heatmap/`).then(r=>r.json());
+
+export const checkAlert = (loc) =>
+  fetch(`${API}/alerts/`, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(loc)
+  }).then(r=>r.json());
+
+export const sendSOS = (loc) =>
+  fetch(`${API}/sos/`, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(loc)
+  });

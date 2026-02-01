@@ -1,124 +1,47 @@
-import { useEffect, useRef, useState } from "react";
-import MapView from "./MapView";
-
-const BACKEND = "https://saferoute-e6bg.onrender.com";
+import { useEffect, useState } from "react";
+import { getRoute, getHeatmap, checkAlert, sendSOS } from "./api";
+import { speak } from "./voice";
+import Map from "./Map";
 
 export default function App() {
-  const user = useRef({ lat: 16.545, lon: 81.521 });
-
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [destination, setDestination] = useState(null);
-  const [routes, setRoutes] = useState([]);
+  const [user, setUser] = useState(null);
+  const [dest, setDest] = useState(null);
+  const [route, setRoute] = useState(null);
   const [heatmap, setHeatmap] = useState([]);
 
-  // GPS (single safe read)
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        user.current = {
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude
-        };
-      },
-      () => { }
-    );
+    navigator.geolocation.getCurrentPosition(p => {
+      setUser({ lat: p.coords.latitude, lon: p.coords.longitude });
+    });
+    getHeatmap().then(setHeatmap);
   }, []);
 
-  // Search
-  async function searchPlace(q) {
-    if (!q) return;
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${q}`
-    );
-    const d = await r.json();
-    setResults(
-      d.slice(0, 5).map(p => ({
-        name: p.display_name,
-        lat: +p.lat,
-        lon: +p.lon
-      }))
-    );
-  }
-
-  // Routes
   useEffect(() => {
-    if (!destination) return;
+    if (user && dest) {
+      getRoute(user, dest).then(setRoute);
+    }
+  }, [user, dest]);
 
-    fetch(`${BACKEND}/smart-route/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        source: user.current,
-        destination,
-        area: "Bhimavaram",
-        time: "night"
-      })
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setRoutes(
-            data.filter(r => r.geometry && r.geometry.coordinates)
-          );
-        } else {
-          setRoutes([]);
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(() => {
+      checkAlert(user).then(r => {
+        if (r.alert) {
+          speak(r.alert);
+          alert(r.alert);
         }
-      })
-      .catch(() => setRoutes([]));
-  }, [destination]);
+      });
+    }, 6000);
+    return () => clearInterval(id);
+  }, [user]);
 
-  // Heatmap
-  useEffect(() => {
-    fetch(`${BACKEND}/heatmap/`)
-      .then(r => {
-        if (!r.ok) return [];
-        return r.json();
-      })
-      .then(data => {
-        setHeatmap(Array.isArray(data) ? data : []);
-      })
-      .catch(() => setHeatmap([]));
-  }, []);
+  if (!user) return <h3>📡 Getting GPS…</h3>;
 
   return (
-    <div style={{ height: "100vh" }}>
-      {/* Search */}
-      <div style={{ padding: 8 }}>
-        <input
-          value={query}
-          onChange={e => {
-            setQuery(e.target.value);
-            searchPlace(e.target.value);
-          }}
-          placeholder="Search destination..."
-          style={{ width: "100%", padding: 8 }}
-        />
-        {results.map((r, i) => (
-          <div
-            key={i}
-            onClick={() => {
-              setDestination({ lat: r.lat, lon: r.lon });
-              setQuery(r.name);
-              setResults([]);
-            }}
-            style={{ padding: 6, cursor: "pointer" }}
-          >
-            📍 {r.name}
-          </div>
-        ))}
-      </div>
-
-      {/* Map */}
-      <div style={{ height: "85%" }}>
-        <MapView
-          user={user.current}
-          destination={destination}
-          routes={routes}
-          heatmap={heatmap}
-        />
-      </div>
-    </div>
+    <>
+      <button onClick={() => sendSOS(user)}>🚨 SOS</button>
+      <Map user={user} dest={dest} route={route} heatmap={heatmap} setDest={setDest} />
+      {route && <div>📍 {route.distance_km} km | ⏱ {route.eta_min} min</div>}
+    </>
   );
 }

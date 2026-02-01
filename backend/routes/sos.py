@@ -2,26 +2,16 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from datetime import datetime
 
-router = APIRouter(prefix="/sos", tags=["Emergency"])
-
-alerts = []
+router = APIRouter(prefix="/sos", tags=["SOS"])
 
 class SOS(BaseModel):
     lat: float
     lon: float
-    message: str = "Emergency"
 
 @router.post("/")
-def send_sos(data: SOS):
-    alert = {
-        "lat": data.lat,
-        "lon": data.lon,
-        "message": data.message,
-        "time": datetime.utcnow().isoformat()
+def sos(data: SOS):
+    return {
+        "status": "SOS SENT",
+        "location": data,
+        "time": datetime.utcnow()
     }
-    alerts.append(alert)
-    return {"status": "sent", "alert": alert}
-
-@router.get("/")
-def get_alerts():
-    return alerts
