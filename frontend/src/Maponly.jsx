@@ -2,22 +2,49 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 
 export default function MapOnly() {
-    const mapEl = useRef(null);
+    const mapRef = useRef(null);
+    const mapInstance = useRef(null);
 
     useEffect(() => {
-        const map = L.map(mapEl.current).setView([16.5449, 81.5212], 14);
+        // HARD delay so Netlify DOM + CSS are ready
+        const timer = setTimeout(() => {
+            if (mapInstance.current) return;
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: "© OpenStreetMap",
-        }).addTo(map);
+            mapInstance.current = L.map(mapRef.current, {
+                zoomControl: true,
+                attributionControl: true,
+            }).setView([16.5449, 81.5212], 14);
 
-        L.marker([16.5449, 81.5212])
-            .addTo(map)
-            .bindPopup("Leaflet works in React.")
-            .openPopup();
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: "© OpenStreetMap",
+                maxZoom: 19,
+            }).addTo(mapInstance.current);
 
-        return () => map.remove();
+            L.marker([16.5449, 81.5212])
+                .addTo(mapInstance.current)
+                .bindPopup("SafeRoute Map Loaded")
+                .openPopup();
+
+            // FORCE resize (Netlify bug fix)
+            setTimeout(() => {
+                mapInstance.current.invalidateSize();
+            }, 300);
+        }, 300);
+
+        return () => clearTimeout(timer);
     }, []);
 
-    return <div ref={mapEl} style={{ height: "100vh", width: "100%" }} />;
+    return (
+        <div
+            ref={mapRef}
+            style={{
+                height: "100vh",
+                width: "100vw",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                background: "#000",
+            }}
+        />
+    );
 }
