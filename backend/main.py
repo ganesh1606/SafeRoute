@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from services.routing_service import get_routes, reroute
-from services.heatmap_service import get_heatmap
-from services.alert_service import check_danger
-from services.sos_service import trigger_sos
+from services.routing_service import get_routes
 
-app = FastAPI(title="SafeRoute API")
+app = FastAPI(
+    title="SafeRoute API",
+    version="1.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,24 +14,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def root():
+    return {"status": "SafeRoute backend running"}
+
 @app.post("/routes")
 def routes(payload: dict):
-    return get_routes(payload)
+    source = payload.get("source")
+    destination = payload.get("destination")
+    mode = payload.get("mode", "car")
 
-@app.post("/reroute")
-def reroute_api(payload: dict):
-    return reroute(payload)
+    if not source or not destination:
+        return {"error": "Source or destination missing"}
 
-@app.post("/danger-alert")
-def danger_alert(payload: dict):
-    return check_danger(payload)
-
-@app.get("/heatmap")
-def heatmap():
-    return get_heatmap()
-
-@app.post("/sos")
-def sos(payload: dict):
-    return trigger_sos(payload)
-
-
+    return {
+        "routes": get_routes(source, destination, mode)
+    }

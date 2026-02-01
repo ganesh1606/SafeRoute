@@ -1,19 +1,39 @@
-import requests
-from services.safety_service import score_route
+import random
 
-OSRM = "https://router.project-osrm.org/route/v1"
+def get_routes(source, destination, mode):
+    return [
+        build_route(source, destination, mode, 1, "green", 0.18, 4.2),
+        build_route(source, destination, mode, 2, "orange", 0.45, 3.6),
+        build_route(source, destination, mode, 3, "red", 0.72, 3.1),
+    ]
 
-def get_routes(payload):
-    src = payload["source"]
-    dst = payload["destination"]
-    mode = payload.get("mode", "car")
+def build_route(source, destination, mode, seed, color, risk, distance):
+    random.seed(seed)
 
-    url = f"{OSRM}/{mode}/{src['lon']},{src['lat']};{dst['lon']},{dst['lat']}?alternatives=true&geometries=geojson"
-    data = requests.get(url).json()
+    points = []
+    lat1, lon1 = source["lat"], source["lon"]
+    lat2, lon2 = destination["lat"], destination["lon"]
 
-    routes = []
-    for r in data.get("routes", [])[:3]:
-        points = [{"lat": y, "lon": x} for x, y in r["geometry"]["coordinates"]]
-        routes.append(score_route(points))
+    for i in range(10):
+        t = i / 9
+        points.append({
+            "lat": lat1 + (lat2 - lat1) * t + random.uniform(-0.001, 0.001),
+            "lon": lon1 + (lon2 - lon1) * t + random.uniform(-0.001, 0.001),
+        })
 
-    return {"routes": routes}
+    return {
+        "color": color,
+        "risk": risk,
+        "distance": distance,
+        "eta": calculate_eta(distance, mode),
+        "points": points
+    }
+
+def calculate_eta(distance_km, mode):
+    speeds = {
+        "walk": 5,
+        "cycle": 15,
+        "car": 40
+    }
+    speed = speeds.get(mode, 40)
+    return round((distance_km / speed) * 60, 1)
